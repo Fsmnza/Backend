@@ -1,0 +1,49 @@
+version: '3.8'
+
+networks:
+  default: {}
+  app:
+    driver: bridge
+
+services:
+  database:
+    container_name: database
+    hostname: database
+    restart: unless-stopped
+    image: postgres:16.0
+    environment:
+      PGDATA: "/var/lib/postgresql/data/pgdata"
+    volumes:
+      - database-data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    env_file:
+      - .env
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 4G
+    networks:
+      - app
+  backend:
+    container_name: backend
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - 8000:8000
+    networks:
+      - app
+    depends_on:
+      database:
+        condition: service_healthy
+
+volumes:
+  database-data:
